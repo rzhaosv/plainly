@@ -23,7 +23,10 @@
       "adaptiveIcon": {
         "backgroundColor": "#241838",
         "foregroundImage": "./assets/adaptive-icon.png"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       [
@@ -49,7 +52,9 @@
     },
     "owner": "raymondzhao3000",
     "extra": {
-      "eas": {}
+      "eas": {
+        "projectId": "8383d11d-672a-4611-a5ef-582ce7739dd0"
+      }
     }
   }
 }
