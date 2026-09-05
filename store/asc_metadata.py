@@ -3,6 +3,7 @@ import asc, json, os, glob, time
 APP='6809042236'
 SUBS=tuple(x for x in os.environ.get('PLAINLY_SUBS','').split(',') if x)
 SHOTS=sorted(glob.glob('/Users/raymondzhao/workspace/plainly/store/screenshots/0*.png'))
+SHOTS65=sorted(glob.glob('/Users/raymondzhao/workspace/plainly/store/screenshots65/0*.png'))
 DESC="""Dating and friendship for autistic, ADHD, AuDHD and otherwise neurodivergent adults. Said plainly.
 
 Plainly is built around the two things that go wrong most for us. First, on a niche app there is never anyone nearby. Second, the swiping was never the hard part; the date was: the bar nobody could hear in, the plan that stayed vague, the two hours with no polite way out.
@@ -63,12 +64,12 @@ if rd.get('data'): r=asc.api('PATCH',f"/v1/appStoreReviewDetails/{rd['data']['id
 else: r=asc.api('POST','/v1/appStoreReviewDetails',{'data':{'type':'appStoreReviewDetails','attributes':ra,'relationships':{'appStoreVersion':{'data':{'type':'appStoreVersions','id':VID}}}}})
 print('review detail', 'ok' if 'data' in r else json.dumps(r)[:300])
 if en and SHOTS:
-    for disp in ('APP_IPHONE_67','APP_IPHONE_65'):
+    for disp, files in (('APP_IPHONE_67', SHOTS), ('APP_IPHONE_65', SHOTS65)):
         sets=asc.api('GET',f"/v1/appStoreVersionLocalizations/{en['id']}/appScreenshotSets?fields[appScreenshotSets]=screenshotDisplayType")['data']
         st=next((s for s in sets if s['attributes']['screenshotDisplayType']==disp),None)
         if not st: st=ok(asc.api('POST','/v1/appScreenshotSets',{'data':{'type':'appScreenshotSets','attributes':{'screenshotDisplayType':disp},'relationships':{'appStoreVersionLocalization':{'data':{'type':'appStoreVersionLocalizations','id':en['id']}}}}}),'set')
         have=[x['attributes']['fileName'] for x in asc.api('GET',f"/v1/appScreenshotSets/{st['id']}/appScreenshots?fields[appScreenshots]=fileName")['data']]
-        for f in SHOTS:
+        for f in files:
             if os.path.basename(f) in have: continue
             r=asc.upload_asset('/v1/appScreenshots',{'data':{'type':'appScreenshots','attributes':{'fileName':os.path.basename(f)},'relationships':{'appScreenshotSet':{'data':{'type':'appScreenshotSets','id':st['id']}}}}},f,'appScreenshots')
             print('  shot', disp, os.path.basename(f), 'ok' if 'data' in r else json.dumps(r)[:200])
