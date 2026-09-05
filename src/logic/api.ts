@@ -1,5 +1,6 @@
 import { supabase, BUCKET } from '../services/supabase';
 import { InboxRow, Message, Pair, PlanCard, Profile, TableRow } from './types';
+import { demo, DEMO_ME, DEMO_PEOPLE, DEMO_TABLES, DEMO_MY_PAIR, DEMO_PAIRS, DEMO_INBOX, DEMO_MESSAGES } from '../dev/demo';
 
 function db() {
   if (!supabase) throw new Error('offline');
@@ -10,6 +11,7 @@ const MINI = 'id,display_name,photo_path,handle,birth_year';
 
 /** Anonymous session on first launch; nothing to type before you see the app. */
 export async function ensureSession(): Promise<string> {
+  if (demo) return 'me';
   const s = db();
   const { data } = await s.auth.getSession();
   if (data.session?.user) return data.session.user.id;
@@ -19,11 +21,13 @@ export async function ensureSession(): Promise<string> {
 }
 
 export async function getMyProfile(uid: string): Promise<Profile | null> {
+  if (demo) return demo.name === 'onboard' ? null : DEMO_ME;
   const { data } = await db().from('pl_profiles').select(PROFILE_COLS).eq('id', uid).maybeSingle();
   return (data as Profile | null) ?? null;
 }
 
 export async function saveProfile(uid: string, patch: Partial<Profile>): Promise<Profile> {
+  if (demo) return { ...DEMO_ME, ...patch };
   const { data, error } = await db().from('pl_profiles').upsert({ id: uid, ...patch, last_seen: new Date().toISOString() }).select(PROFILE_COLS).single();
   if (error) throw error;
   return data as Profile;
@@ -45,6 +49,7 @@ export async function uploadPhoto(uid: string, uri: string): Promise<string> {
 
 // ---------- People (1:1) ----------
 export async function listPeople(uid: string, city: string, opts: { anywhere?: boolean; looking?: string | null; identity?: string | null } = {}): Promise<Profile[]> {
+  if (demo) return DEMO_PEOPLE;
   const s = db();
   const [{ data: liked }, { data: passed }, { data: matched }] = await Promise.all([
     s.from('pl_likes').select('to_id').eq('from_id', uid),
@@ -65,6 +70,7 @@ export async function listPeople(uid: string, city: string, opts: { anywhere?: b
 }
 
 export async function whoLikedMe(uid: string): Promise<Profile[]> {
+  if (demo) return [DEMO_PEOPLE[2], DEMO_PEOPLE[1]];
   const s = db();
   const { data: likes } = await s.from('pl_likes').select('from_id').eq('to_id', uid);
   const { data: mine } = await s.from('pl_likes').select('to_id').eq('from_id', uid);
@@ -93,10 +99,12 @@ export async function unmatch(matchId: string): Promise<void> {
   if (error) throw error;
 }
 export async function getProfile(id: string): Promise<Profile | null> {
+  if (demo) return DEMO_PEOPLE.find((p) => p.id === id) ?? DEMO_ME;
   const { data } = await db().from('pl_profiles').select(PROFILE_COLS).eq('id', id).maybeSingle();
   return (data as Profile | null) ?? null;
 }
 export async function matchFor(uid: string, other: string): Promise<{ id: string; thread_id: string | null } | null> {
+  if (demo) return null;
   const [a, b] = uid < other ? [uid, other] : [other, uid];
   const { data } = await db().from('pl_matches').select('id,thread_id').eq('a_id', a).eq('b_id', b).maybeSingle();
   return (data as any) ?? null;
@@ -104,6 +112,7 @@ export async function matchFor(uid: string, other: string): Promise<{ id: string
 
 // ---------- Tables (group invites) ----------
 export async function listTables(uid: string, city: string, anywhere = false): Promise<TableRow[]> {
+  if (demo) return DEMO_TABLES;
   const s = db();
   let q = s.from('pl_tables').select('*, host:pl_profiles!pl_tables_host_id_fkey(id,display_name,photo_path,handle), rsvps:pl_table_rsvps(user_id,status)')
     .in('status', ['open', 'full']).gte('starts_at', new Date(Date.now() - 3 * 3600_000).toISOString()).order('starts_at').limit(60);
@@ -113,6 +122,7 @@ export async function listTables(uid: string, city: string, anywhere = false): P
   return (data ?? []).map((r: any) => shapeTable(r, uid));
 }
 export async function myTables(uid: string): Promise<TableRow[]> {
+  if (demo) return [];
   const { data, error } = await db().from('pl_tables').select('*, host:pl_profiles!pl_tables_host_id_fkey(id,display_name,photo_path,handle), rsvps:pl_table_rsvps(user_id,status)')
     .in('status', ['open', 'full']).order('starts_at').limit(60);
   if (error) throw error;
@@ -125,10 +135,12 @@ function shapeTable(r: any, uid: string): TableRow {
   return t;
 }
 export async function getTable(id: string, uid: string): Promise<TableRow | null> {
+  if (demo) return DEMO_TABLES.find((t) => t.id === id) ?? DEMO_TABLES[0];
   const { data } = await db().from('pl_tables').select('*, host:pl_profiles!pl_tables_host_id_fkey(id,display_name,photo_path,handle), rsvps:pl_table_rsvps(user_id,status)').eq('id', id).maybeSingle();
   return data ? shapeTable(data, uid) : null;
 }
 export async function tableGuests(id: string): Promise<(Pick<Profile, 'id' | 'display_name' | 'photo_path' | 'handle' | 'birth_year'> & { status: string })[]> {
+  if (demo) return [{ ...DEMO_PEOPLE[1], status: 'going' }, { ...DEMO_ME, status: 'going' }, { ...DEMO_PEOPLE[2], status: 'going' }, { ...DEMO_PEOPLE[0], status: 'maybe' }];
   const { data } = await db().from('pl_table_rsvps').select(`status, p:pl_profiles(${MINI})`).eq('table_id', id).neq('status', 'out');
   return (data ?? []).map((r: any) => ({ ...r.p, status: r.status }));
 }
@@ -148,12 +160,14 @@ export async function cancelTable(tbl: string): Promise<void> {
 
 // ---------- Pairs (double dates) ----------
 export async function myPairs(uid: string): Promise<Pair[]> {
+  if (demo) return [DEMO_MY_PAIR];
   const { data, error } = await db().from('pl_pairs').select(`*, a:pl_profiles!pl_pairs_a_id_fkey(${MINI}), b:pl_profiles!pl_pairs_b_id_fkey(${MINI})`)
     .or(`a_id.eq.${uid},b_id.eq.${uid}`).neq('status', 'ended').order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as Pair[];
 }
 export async function listPairs(mine: Pair, anywhere = false): Promise<Pair[]> {
+  if (demo) return DEMO_PAIRS;
   const s = db();
   const { data: liked } = await s.from('pl_pair_likes').select('to_pair').eq('from_pair', mine.id);
   const { data: matched } = await s.from('pl_pair_matches').select('a_pair,b_pair').or(`a_pair.eq.${mine.id},b_pair.eq.${mine.id}`);
@@ -187,11 +201,13 @@ export async function pairLike(mine: string, target: string): Promise<{ matched:
 
 // ---------- Chat ----------
 export async function inbox(): Promise<InboxRow[]> {
+  if (demo) return DEMO_INBOX;
   const { data, error } = await db().rpc('pl_inbox');
   if (error) throw error;
   return (data ?? []) as InboxRow[];
 }
 export async function messages(threadId: string): Promise<Message[]> {
+  if (demo) return DEMO_MESSAGES;
   const { data, error } = await db().from('pl_messages').select('*').eq('thread_id', threadId).order('created_at').limit(300);
   if (error) throw error;
   return (data ?? []) as Message[];
@@ -205,16 +221,18 @@ export async function sendPlan(threadId: string, uid: string, plan: PlanCard): P
   if (error) throw error;
 }
 export async function markRead(t: string): Promise<void> {
+  if (demo) return ;
   await db().rpc('pl_mark_read', { t });
 }
 export function subscribeThread(threadId: string, onMessage: (m: Message) => void): () => void {
-  if (!supabase) return () => {};
+  if (!supabase || demo) return () => {};
   const ch = supabase.channel(`pl-thread-${threadId}`)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pl_messages', filter: `thread_id=eq.${threadId}` }, (payload) => onMessage(payload.new as Message))
     .subscribe();
   return () => { supabase?.removeChannel(ch); };
 }
 export async function threadMembers(threadId: string): Promise<Pick<Profile, 'id' | 'display_name' | 'photo_path' | 'handle' | 'birth_year'>[]> {
+  if (demo) return [DEMO_PEOPLE[0], DEMO_ME];
   const { data } = await db().from('pl_thread_members').select(`p:pl_profiles(${MINI})`).eq('thread_id', threadId);
   return (data ?? []).map((r: any) => r.p);
 }

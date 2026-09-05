@@ -4,6 +4,7 @@ import { Profile } from '../logic/types';
 import { ensureSession, getMyProfile, saveProfile } from '../logic/api';
 import { supabase } from '../services/supabase';
 import { configureBilling, getCustomerInfo, isPlus, addPlusListener } from '../services/billing';
+import { demo } from '../dev/demo';
 
 const DEV_UNLOCK = process.env.EXPO_PUBLIC_DEV_UNLOCK === '1' || process.env.EXPO_PUBLIC_DEV_UNLOCK === 'true';
 const PREFS_KEY = 'plainly.prefs.v1';
@@ -33,10 +34,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [plus, setPlus] = useState(DEV_UNLOCK);
+  const [plus, setPlus] = useState(DEV_UNLOCK || (!!demo && demo.name !== 'paywall'));
   const [prefs, setPrefsState] = useState<Prefs>(DEFAULT_PREFS);
   const [attempt, setAttempt] = useState(0);
-  const offline = !supabase;
+  const offline = !supabase && !demo;
 
   useEffect(() => {
     let unsub = () => {};
@@ -46,6 +47,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (raw) setPrefsState({ ...DEFAULT_PREFS, ...(JSON.parse(raw) as Partial<Prefs>) });
       } catch { /* fresh */ }
       if (offline) { setReady(true); return; }
+      if (demo) { setUid('me'); setProfile(await getMyProfile('me')); setReady(true); return; }
       try {
         const id = await ensureSession();
         setUid(id);

@@ -24,6 +24,7 @@ import NewPairScreen from './src/screens/NewPairScreen';
 import ThreadScreen from './src/screens/ThreadScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
 import PaywallScreen from './src/screens/PaywallScreen';
+import { demo } from './src/dev/demo';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -33,7 +34,7 @@ const navTheme: Theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, bac
 function Tabs() {
   return (
     <Tab.Navigator
-      initialRouteName="Tables"
+      initialRouteName={demo ? ({ tables: 'Tables', table: 'Tables', people: 'People', pairs: 'Pairs', chats: 'Chats', thread: 'Chats', paywall: 'Tables', onboard: 'Tables', you: 'You' } as const)[demo.name] : 'Tables'}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
@@ -74,13 +75,13 @@ function Root() {
 
   return (
     <NavigationContainer theme={navTheme}>
-      <Stack.Navigator initialRouteName={justOnboarded && !prefs.seenPaywall ? 'Paywall' : 'Tabs'} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      <Stack.Navigator initialRouteName={demo ? (demo.name === 'table' ? 'Table' : demo.name === 'thread' ? 'Thread' : demo.name === 'paywall' ? 'Paywall' : 'Tabs') : justOnboarded && !prefs.seenPaywall ? 'Paywall' : 'Tabs'} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
         <Stack.Screen name="Tabs" component={Tabs} />
         <Stack.Screen name="Person" component={PersonScreen} />
-        <Stack.Screen name="Table" component={TableScreen} />
+        <Stack.Screen name="Table" component={TableScreen} initialParams={demo ? { id: 't1' } : undefined} />
         <Stack.Screen name="NewTable" component={NewTableScreen} options={{ presentation: 'modal' }} />
         <Stack.Screen name="NewPair" component={NewPairScreen} options={{ presentation: 'modal' }} />
-        <Stack.Screen name="Thread" component={ThreadScreen} />
+        <Stack.Screen name="Thread" component={ThreadScreen} initialParams={demo ? { id: 'th1', title: 'Priya' } : undefined} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ presentation: 'modal' }} />
         <Stack.Screen name="Paywall" component={PaywallScreen} options={{ presentation: 'modal' }} />
       </Stack.Navigator>
@@ -89,13 +90,14 @@ function Root() {
 }
 
 const webFrame = Platform.OS === 'web' ? ({ width: '100%', height: '100vh', overflow: 'hidden', backgroundColor: colors.bg } as const) : null;
+const demoInsets = demo ? { paddingTop: 59, paddingBottom: 34 } : null;
 
 export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <AppProvider>
-        <View style={[{ flex: 1 }, webFrame as any]}><Root /></View>
+        <View style={[{ flex: 1 }, webFrame as any, demoInsets]}><Root /></View>
       </AppProvider>
     </SafeAreaProvider>
   );
