@@ -1,0 +1,8 @@
+node_modules/
+.expo/
+dist/
+*.ipa
+.credentials/
+credentials.json
+.DS_Store
+store/screenshots/raw/

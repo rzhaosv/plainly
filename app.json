@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "Plainly",
+    "slug": "plainly",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "plainly",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F7F3EE",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.formaz.plainly",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Plainly uses your photo library only when you choose a profile photo.",
+        "NSCameraUsageDescription": "Plainly uses the camera only if you choose to take a profile photo.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.formaz.plainly",
+      "adaptiveIcon": {
+        "backgroundColor": "#241838",
+        "foregroundImage": "./assets/adaptive-icon.png"
+      }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Plainly uses your photo library only when you choose a profile photo.",
+          "cameraPermission": "Plainly uses the camera only if you choose to take a profile photo."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#241838"
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "owner": "raymondzhao3000",
+    "extra": {
+      "eas": {}
+    }
+  }
+}
